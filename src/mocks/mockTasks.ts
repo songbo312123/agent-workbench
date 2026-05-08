@@ -1,0 +1,58 @@
+import type { AgentTask } from "../types";
+
+export const mockTasks: AgentTask[] = [
+  {
+    id: "task_plan",
+    sessionId: "ses_mock",
+    title: "任务规划",
+    instruction: "拆解用户任务为可执行子任务",
+    agentId: "agent_orchestrator",
+    dependsOn: [],
+    status: "pending",
+  },
+  {
+    id: "task_research",
+    sessionId: "ses_mock",
+    title: "资料调研",
+    instruction: "收集与主题相关的资料并提炼关键趋势",
+    agentId: "agent_researcher",
+    dependsOn: ["task_plan"],
+    status: "pending",
+  },
+  {
+    id: "task_outline",
+    sessionId: "ses_mock",
+    title: "生成大纲",
+    instruction: "基于用户任务设计报告结构",
+    agentId: "agent_planner",
+    dependsOn: ["task_plan"],
+    status: "pending",
+  },
+  {
+    id: "task_write",
+    sessionId: "ses_mock",
+    title: "撰写正文",
+    instruction: "结合研究结果和大纲撰写正文",
+    agentId: "agent_writer",
+    dependsOn: ["task_research", "task_outline"],
+    status: "pending",
+  },
+  {
+    id: "task_review",
+    sessionId: "ses_mock",
+    title: "审查修改",
+    instruction: "检查事实和逻辑",
+    agentId: "agent_reviewer",
+    dependsOn: ["task_write"],
+    status: "pending",
+  },
+  {
+    id: "task_summary",
+    sessionId: "ses_mock",
+    title: "最终汇总",
+    instruction: "汇总所有子任务结果生成最终报告",
+    agentId: "agent_orchestrator",
+    dependsOn: ["task_review"],
+    status: "pending",
+  },
+];
