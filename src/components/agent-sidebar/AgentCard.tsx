@@ -1,4 +1,4 @@
-import type { Agent } from "../types";
+import type { Agent } from "../../types";
 
 const STATUS_COLORS: Record<string, string> = {
   idle: "#6B7280",

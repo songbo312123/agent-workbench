@@ -98,4 +98,4 @@ CREATE TABLE IF NOT EXISTS settings (
   updated_at TEXT NOT NULL
 );
 
-INSERT INTO schema_migrations (version, applied_at) VALUES ('001', datetime('now'));
+INSERT OR IGNORE INTO schema_migrations (version, applied_at) VALUES ('001', datetime('now'));

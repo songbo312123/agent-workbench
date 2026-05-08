@@ -12,6 +12,7 @@ export type AgentTask = {
   sessionId: string;
   title: string;
   instruction: string;
+  expectedOutput?: string;
   agentId: string;
   dependsOn: string[];
   status: TaskStatus;

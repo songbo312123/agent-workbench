@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useWorkbenchStore } from "../../stores/workbenchStore";
 import { mockAgents } from "../../mocks/mockAgents";
 import { mockEvents } from "../../mocks/mockEvents";
@@ -14,15 +14,30 @@ export function TopTaskBar() {
   const isPlaying = useWorkbenchStore((s) => s.isPlaying);
   const setIsPlaying = useWorkbenchStore((s) => s.setIsPlaying);
   const session = useWorkbenchStore((s) => s.session);
+  const stopPlaybackRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    return () => {
+      stopPlaybackRef.current?.();
+    };
+  }, []);
 
   function handleStart() {
+    stopPlaybackRef.current?.();
     resetWorkbench();
     setInitialAgents(mockAgents.map((a) => ({ ...a })));
     setIsPlaying(true);
 
-    playMockEvents(mockEvents, (event) => {
-      addEvent(event);
-    });
+    stopPlaybackRef.current = playMockEvents(
+      mockEvents,
+      (event) => {
+        addEvent(event);
+      },
+      () => {
+        setIsPlaying(false);
+        stopPlaybackRef.current = null;
+      }
+    );
   }
 
   return (

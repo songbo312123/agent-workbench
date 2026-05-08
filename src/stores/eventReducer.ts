@@ -63,8 +63,9 @@ export function reduceEvent(
     }
 
     case "planning_started": {
-      const a = event.agentId && agents[event.agentId];
-      if (a) agents[event.agentId] = { ...a, status: "planning", currentAction: event.summary };
+      const agentId = event.agentId;
+      const a = agentId ? agents[agentId] : undefined;
+      if (agentId && a) agents[agentId] = { ...a, status: "planning", currentAction: event.summary };
       break;
     }
 
@@ -73,14 +74,17 @@ export function reduceEvent(
         id: string;
         title: string;
         agentId: string;
+        instruction: string;
         dependsOn: string[];
+        expectedOutput?: string;
       }>;
       for (const t of rawTasks) {
         tasks[t.id] = {
           id: t.id,
           sessionId: event.sessionId,
           title: t.title,
-          instruction: "",
+          instruction: t.instruction,
+          expectedOutput: t.expectedOutput,
           agentId: t.agentId,
           dependsOn: t.dependsOn,
           status: t.dependsOn.length > 0 ? "waiting" : "pending",
@@ -91,14 +95,16 @@ export function reduceEvent(
     }
 
     case "task_started": {
-      const t = event.taskId && tasks[event.taskId];
-      if (t) tasks[event.taskId] = { ...t, status: "running", startedAt: event.timestamp };
-      const a = event.agentId && agents[event.agentId];
-      if (a) {
-        agents[event.agentId] = {
+      const taskId = event.taskId;
+      const agentId = event.agentId;
+      const t = taskId ? tasks[taskId] : undefined;
+      if (taskId && t) tasks[taskId] = { ...t, status: "running", startedAt: event.timestamp };
+      const a = agentId ? agents[agentId] : undefined;
+      if (agentId && a) {
+        agents[agentId] = {
           ...a,
           status: "running",
-          currentTaskId: event.taskId,
+          currentTaskId: taskId,
           currentAction: String(event.payload.label ?? event.summary),
         };
       }
@@ -106,9 +112,10 @@ export function reduceEvent(
     }
 
     case "tool_call_started": {
-      const a = event.agentId && agents[event.agentId];
-      if (a) {
-        agents[event.agentId] = {
+      const agentId = event.agentId;
+      const a = agentId ? agents[agentId] : undefined;
+      if (agentId && a) {
+        agents[agentId] = {
           ...a,
           status: "tool_call",
           currentAction: `调用工具：${String(event.payload.toolName ?? "")}`,
@@ -118,9 +125,10 @@ export function reduceEvent(
     }
 
     case "tool_call_finished": {
-      const a = event.agentId && agents[event.agentId];
-      if (a) {
-        agents[event.agentId] = {
+      const agentId = event.agentId;
+      const a = agentId ? agents[agentId] : undefined;
+      if (agentId && a) {
+        agents[agentId] = {
           ...a,
           status: "running",
           currentAction: `工具完成：${String(event.payload.toolName ?? "")}`,
@@ -130,9 +138,10 @@ export function reduceEvent(
     }
 
     case "agent_message_delta": {
-      const a = event.agentId && agents[event.agentId];
-      if (a) {
-        agents[event.agentId] = {
+      const agentId = event.agentId;
+      const a = agentId ? agents[agentId] : undefined;
+      if (agentId && a) {
+        agents[agentId] = {
           ...a,
           latestMessage: String(event.payload.text ?? ""),
         };
@@ -141,32 +150,36 @@ export function reduceEvent(
     }
 
     case "task_finished": {
-      const t = event.taskId && tasks[event.taskId];
-      if (t) {
-        tasks[event.taskId] = {
+      const taskId = event.taskId;
+      const agentId = event.agentId;
+      const t = taskId ? tasks[taskId] : undefined;
+      if (taskId && t) {
+        tasks[taskId] = {
           ...t,
           status: "success",
           finishedAt: event.timestamp,
           result: String(event.payload.result ?? ""),
         };
       }
-      const a = event.agentId && agents[event.agentId];
-      if (a) agents[event.agentId] = { ...a, status: "success", currentAction: "任务完成" };
+      const a = agentId ? agents[agentId] : undefined;
+      if (agentId && a) agents[agentId] = { ...a, status: "success", currentAction: "任务完成" };
       break;
     }
 
     case "task_failed": {
-      const t = event.taskId && tasks[event.taskId];
-      if (t) {
-        tasks[event.taskId] = {
+      const taskId = event.taskId;
+      const agentId = event.agentId;
+      const t = taskId ? tasks[taskId] : undefined;
+      if (taskId && t) {
+        tasks[taskId] = {
           ...t,
           status: "failed",
           finishedAt: event.timestamp,
           error: String(event.payload.errorMessage ?? event.payload.error ?? ""),
         };
       }
-      const a = event.agentId && agents[event.agentId];
-      if (a) agents[event.agentId] = { ...a, status: "failed", currentAction: event.summary };
+      const a = agentId ? agents[agentId] : undefined;
+      if (agentId && a) agents[agentId] = { ...a, status: "failed", currentAction: event.summary };
       break;
     }
 
@@ -177,6 +190,16 @@ export function reduceEvent(
           status: "completed",
           finishedAt: event.timestamp,
           finalAnswer: String(event.payload.finalAnswer ?? ""),
+        };
+      }
+      const agentId = event.agentId;
+      const a = agentId ? agents[agentId] : undefined;
+      if (agentId && a) {
+        agents[agentId] = {
+          ...a,
+          status: "success",
+          currentTaskId: undefined,
+          currentAction: "最终汇总完成",
         };
       }
       break;
