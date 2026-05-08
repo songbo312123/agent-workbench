@@ -50,7 +50,7 @@ export const useWorkbenchStore = create<AppWorkbenchState>((set) => ({
     }),
 
   hydrateFromEvents: (events) =>
-    set((state) => {
+    set(() => {
       let s = { ...createInitialState() };
       for (const e of events) {
         s = reduceEvent(s, e);

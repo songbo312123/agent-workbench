@@ -1,6 +1,3 @@
-import type { AgentStatus } from "./agent";
-import type { TaskStatus } from "./task";
-
 export type SessionStatus =
   | "idle"
   | "planning"
