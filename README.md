@@ -21,10 +21,17 @@
 ## 快速开始
 
 ```bash
-# 前端（需要先搭 Tauri + React + Vite 项目，然后将 src/ 内容复制进去）
 npm install
 npm run dev
 ```
+
+然后打开 Vite 输出的本地地址，通常是：
+
+```text
+http://localhost:5173
+```
+
+更多开发说明见 [DEVELOPMENT.md](DEVELOPMENT.md)。
 
 ## 项目结构
 
