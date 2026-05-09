@@ -1,13 +1,15 @@
+import { useMemo } from "react";
 import { useWorkbenchStore } from "../../stores/workbenchStore";
 import { EventBlock } from "./EventBlock";
 import type { TraceEvent } from "../../types";
 
 export function LaneView() {
-  const agents = useWorkbenchStore((s) => Object.values(s.agents));
+  const agentMap = useWorkbenchStore((s) => s.agents);
   const events = useWorkbenchStore((s) => s.events);
   const selectEvent = useWorkbenchStore((s) => s.selectEvent);
 
-  const eventsByAgent = groupByAgent(events);
+  const agents = useMemo(() => Object.values(agentMap), [agentMap]);
+  const eventsByAgent = useMemo(() => groupByAgent(events), [events]);
 
   return (
     <div className="lane-view">

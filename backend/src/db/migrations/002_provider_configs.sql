@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS provider_configs (
   provider_key TEXT NOT NULL,
   display_name TEXT NOT NULL,
   base_url TEXT NOT NULL,
-  api_key TEXT NOT NULL,
+  api_key TEXT NOT NULL DEFAULT '',
   is_preset INTEGER NOT NULL DEFAULT 0,
   enabled INTEGER NOT NULL DEFAULT 1,
   sort_order INTEGER NOT NULL DEFAULT 0,

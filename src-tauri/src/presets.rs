@@ -1,7 +1,6 @@
 use crate::models::ProviderConfig;
 
 pub fn get_preset_providers() -> Vec<ProviderConfig> {
-    let now = chrono_now();
     vec![
         mk("anthropic", "Anthropic", "https://api.anthropic.com", true, 0),
         mk("openai_compatible", "OpenAI Compatible", "https://api.openai.com/v1", true, 1),

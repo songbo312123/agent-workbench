@@ -22,14 +22,18 @@
 
 ```bash
 npm install
+npm --prefix backend install
 npm run dev
 ```
 
-然后打开 Vite 输出的本地地址，通常是：
+`npm run dev` 会同时启动：
 
 ```text
-http://localhost:5173
+前端：http://127.0.0.1:5173
+后端：http://127.0.0.1:8787
 ```
+
+进入页面后点击右上角“设置”，先加载预置 Provider，然后填入 OpenAI 兼容格式的 baseUrl + apiKey + model。
 
 更多开发说明见 [DEVELOPMENT.md](DEVELOPMENT.md)。
 

@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import type { ProviderConfig, ProviderConfigInput, ProviderModel, ProviderModelInput } from "../types/provider";
-import { providerApi } from "../lib/tauri-ipc";
+import { backendProviderApi } from "../lib/backend-api";
 
 export type ProviderStoreState = {
   configs: ProviderConfig[];
@@ -30,7 +30,7 @@ export const useProviderStore = create<ProviderStoreState>((set, get) => ({
   loadConfigs: async () => {
     set({ loading: true, error: null });
     try {
-      const configs = await providerApi.listConfigs<ProviderConfig>();
+      const configs = await api().listConfigs();
       set({ configs, loading: false });
     } catch (e) {
       set({ error: String(e), loading: false });
@@ -40,7 +40,7 @@ export const useProviderStore = create<ProviderStoreState>((set, get) => ({
   seedPresets: async () => {
     set({ loading: true, error: null });
     try {
-      const configs = await providerApi.seedPresets<ProviderConfig>();
+      const configs = await api().seedPresets();
       set({ configs, loading: false });
     } catch (e) {
       set({ error: String(e), loading: false });
@@ -52,7 +52,7 @@ export const useProviderStore = create<ProviderStoreState>((set, get) => ({
   saveConfig: async (input) => {
     set({ loading: true, error: null });
     try {
-      await providerApi.upsertConfig<ProviderConfig>(input as Record<string, unknown>);
+      await api().upsertConfig(input);
       await get().loadConfigs();
     } catch (e) {
       set({ error: String(e), loading: false });
@@ -62,7 +62,7 @@ export const useProviderStore = create<ProviderStoreState>((set, get) => ({
   deleteConfig: async (id) => {
     set({ loading: true, error: null });
     try {
-      await providerApi.deleteConfig(id);
+      await api().deleteConfig(id);
       const { selectedConfigId } = get();
       if (selectedConfigId === id) set({ selectedConfigId: null });
       await get().loadConfigs();
@@ -73,7 +73,7 @@ export const useProviderStore = create<ProviderStoreState>((set, get) => ({
 
   loadModels: async (providerConfigId) => {
     try {
-      const models = await providerApi.listModels<ProviderModel>(providerConfigId);
+      const models = await api().listModels(providerConfigId);
       set((s) => ({
         modelsByProvider: { ...s.modelsByProvider, [providerConfigId]: models },
       }));
@@ -84,7 +84,7 @@ export const useProviderStore = create<ProviderStoreState>((set, get) => ({
 
   saveModel: async (input) => {
     try {
-      await providerApi.upsertModel<ProviderModel>(input as Record<string, unknown>);
+      await api().upsertModel(input);
       await get().loadModels(input.providerConfigId);
     } catch (e) {
       set({ error: String(e) });
@@ -93,7 +93,7 @@ export const useProviderStore = create<ProviderStoreState>((set, get) => ({
 
   deleteModel: async (id, providerConfigId) => {
     try {
-      await providerApi.deleteModel(id);
+      await api().deleteModel(id);
       await get().loadModels(providerConfigId);
     } catch (e) {
       set({ error: String(e) });
@@ -102,10 +102,14 @@ export const useProviderStore = create<ProviderStoreState>((set, get) => ({
 
   setDefaultModel: async (providerConfigId, modelId) => {
     try {
-      await providerApi.setDefaultModel(providerConfigId, modelId);
+      await api().setDefaultModel(providerConfigId, modelId);
       await get().loadModels(providerConfigId);
     } catch (e) {
       set({ error: String(e) });
     }
   },
 }));
+
+function api() {
+  return backendProviderApi;
+}

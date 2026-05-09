@@ -283,13 +283,19 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 /* ===== Settings Button ===== */
 
 .btn-settings {
-  font-size: 20px;
-  padding: 6px 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
   border-radius: 8px;
   color: var(--muted);
+  background: var(--panel-soft);
+  border: 1px solid var(--border);
   transition: 120ms;
 }
-.btn-settings:hover { color: var(--text); background: var(--panel-soft); }
+.btn-settings:hover { color: var(--text); border-color: var(--blue); }
+.btn-settings-icon { font-size: 18px; line-height: 1; }
+.btn-settings-label { font-size: 13px; font-weight: 500; }
 
 /* ===== Settings Overlay & Dialog ===== */
 
@@ -304,7 +310,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 }
 
 .settings-dialog {
-  width: 880px;
+  width: min(960px, calc(100vw - 32px));
   max-height: 80vh;
   background: var(--panel);
   border: 1px solid var(--border);
@@ -324,6 +330,15 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 .settings-header h2 { font-size: 16px; font-weight: 600; }
 .settings-close { font-size: 18px; color: var(--muted); padding: 4px 8px; }
 .settings-close:hover { color: var(--text); }
+
+.settings-error {
+  padding: 10px 24px;
+  border-bottom: 1px solid rgba(239,68,68,.35);
+  background: rgba(239,68,68,.12);
+  color: #fca5a5;
+  font-size: 12px;
+  line-height: 1.5;
+}
 
 .settings-body {
   display: grid;

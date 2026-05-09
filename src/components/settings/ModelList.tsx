@@ -1,8 +1,11 @@
 import { useState } from "react";
 import { useProviderStore } from "../../stores/providerStore";
+import type { ProviderModel } from "../../types/provider";
+
+const EMPTY_MODELS: ProviderModel[] = [];
 
 export function ModelList({ providerConfigId }: { providerConfigId: string }) {
-  const models = useProviderStore((s) => s.modelsByProvider[providerConfigId] ?? []);
+  const models = useProviderStore((s) => s.modelsByProvider[providerConfigId] ?? EMPTY_MODELS);
   const saveModel = useProviderStore((s) => s.saveModel);
   const deleteModel = useProviderStore((s) => s.deleteModel);
   const setDefaultModel = useProviderStore((s) => s.setDefaultModel);

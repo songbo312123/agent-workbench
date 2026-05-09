@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import type { Agent, AgentTask, TraceEvent, Session } from "../types";
+import { createDefaultAgents } from "../mocks/mockAgents";
 import { createInitialState, reduceEvent } from "./eventReducer";
 
 export type AppWorkbenchState = {
@@ -27,8 +28,13 @@ export type AppWorkbenchState = {
   setIsPlaying: (v: boolean) => void;
 };
 
+function createDefaultAgentMap(): Record<string, Agent> {
+  return Object.fromEntries(createDefaultAgents().map((agent) => [agent.id, agent]));
+}
+
 export const useWorkbenchStore = create<AppWorkbenchState>((set) => ({
   ...createInitialState(),
+  agents: createDefaultAgentMap(),
   isPlaying: false,
 
   setInitialAgents: (agents) =>
@@ -43,6 +49,7 @@ export const useWorkbenchStore = create<AppWorkbenchState>((set) => ({
   resetWorkbench: () =>
     set({
       ...createInitialState(),
+      agents: createDefaultAgentMap(),
       isPlaying: false,
       selectedAgentId: undefined,
       selectedTaskId: undefined,
@@ -51,7 +58,10 @@ export const useWorkbenchStore = create<AppWorkbenchState>((set) => ({
 
   hydrateFromEvents: (events) =>
     set(() => {
-      let s = { ...createInitialState() };
+      let s = {
+        ...createInitialState(),
+        agents: createDefaultAgentMap(),
+      };
       for (const e of events) {
         s = reduceEvent(s, e);
       }

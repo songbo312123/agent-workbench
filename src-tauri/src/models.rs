@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct ProviderConfig {
     pub id: String,
     pub provider_key: String,
@@ -15,6 +16,7 @@ pub struct ProviderConfig {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ProviderConfigInput {
     pub id: Option<String>,
     pub provider_key: String,
@@ -25,6 +27,7 @@ pub struct ProviderConfigInput {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct ProviderModel {
     pub id: String,
     pub provider_config_id: String,
@@ -36,6 +39,7 @@ pub struct ProviderModel {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ProviderModelInput {
     pub id: Option<String>,
     pub provider_config_id: String,

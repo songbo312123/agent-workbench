@@ -3,6 +3,7 @@ import { useWorkbenchStore } from "../../stores/workbenchStore";
 import { mockAgents } from "../../mocks/mockAgents";
 import { mockEvents } from "../../mocks/mockEvents";
 import { playMockEvents } from "../../mocks/mockPlayer";
+import { createSession, subscribeSessionEvents } from "../../lib/backend-api";
 
 export function TopTaskBar({ onSettingsClick }: { onSettingsClick: () => void }) {
   const [task, setTask] = useState(
@@ -22,22 +23,38 @@ export function TopTaskBar({ onSettingsClick }: { onSettingsClick: () => void })
     };
   }, []);
 
-  function handleStart() {
+  async function handleStart() {
     stopPlaybackRef.current?.();
     resetWorkbench();
-    setInitialAgents(mockAgents.map((a) => ({ ...a })));
+    setInitialAgents(mockAgents.map((agent) => ({ ...agent })));
     setIsPlaying(true);
 
-    stopPlaybackRef.current = playMockEvents(
-      mockEvents,
-      (event) => {
-        addEvent(event);
-      },
-      () => {
-        setIsPlaying(false);
-        stopPlaybackRef.current = null;
-      }
-    );
+    try {
+      const { sessionId } = await createSession(task);
+      stopPlaybackRef.current = subscribeSessionEvents(
+        sessionId,
+        (event) => {
+          addEvent(event);
+          if (event.type === "session_finished" || event.type === "session_failed") {
+            setIsPlaying(false);
+          }
+        },
+        () => {
+          setIsPlaying(false);
+        }
+      );
+    } catch {
+      stopPlaybackRef.current = playMockEvents(
+        mockEvents,
+        (event) => {
+          addEvent(event);
+        },
+        () => {
+          setIsPlaying(false);
+          stopPlaybackRef.current = null;
+        }
+      );
+    }
   }
 
   return (
@@ -57,8 +74,16 @@ export function TopTaskBar({ onSettingsClick }: { onSettingsClick: () => void })
           {session.status === "completed" ? "已完成" : `状态：${session.status}`}
         </span>
       )}
-      <button className="btn-settings" onClick={onSettingsClick} title="API Settings">
-        ⚙
+      <button
+        type="button"
+        className="btn-settings"
+        onPointerDown={onSettingsClick}
+        onClick={onSettingsClick}
+        title="打开设置"
+        aria-label="打开设置"
+      >
+        <span className="btn-settings-icon">⚙</span>
+        <span className="btn-settings-label">设置</span>
       </button>
     </div>
   );

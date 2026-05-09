@@ -183,6 +183,18 @@ export function reduceEvent(
       break;
     }
 
+    case "session_failed": {
+      if (session) {
+        session = {
+          ...session,
+          status: "failed",
+          finishedAt: event.timestamp,
+          finalAnswer: String(event.payload.error ?? "任务失败"),
+        };
+      }
+      break;
+    }
+
     case "session_finished": {
       if (session) {
         session = {

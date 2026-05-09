@@ -42,3 +42,7 @@ export const mockAgents: Agent[] = [
     status: "idle",
   },
 ];
+
+export function createDefaultAgents(): Agent[] {
+  return mockAgents.map((agent) => ({ ...agent }));
+}

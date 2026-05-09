@@ -1,8 +1,10 @@
+import { useMemo } from "react";
 import { useWorkbenchStore } from "../../stores/workbenchStore";
 import { AgentCard } from "./AgentCard";
 
 export function AgentSidebar() {
-  const agents = useWorkbenchStore((s) => Object.values(s.agents));
+  const agentMap = useWorkbenchStore((s) => s.agents);
+  const agents = useMemo(() => Object.values(agentMap), [agentMap]);
   const selectedAgentId = useWorkbenchStore((s) => s.selectedAgentId);
   const selectAgent = useWorkbenchStore((s) => s.selectAgent);
 

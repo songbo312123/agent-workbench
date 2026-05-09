@@ -1,8 +1,11 @@
 use rusqlite::{params, Connection};
 use std::path::Path;
 use std::sync::Mutex;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::models::{ProviderConfig, ProviderConfigInput, ProviderModel, ProviderModelInput};
+
+const KEYCHAIN_SERVICE: &str = "Agent Workbench Provider API Keys";
 
 pub struct Db(pub Mutex<Connection>);
 
@@ -32,16 +35,17 @@ fn run_migrations(conn: &Connection) -> Result<(), String> {
 
 pub fn list_provider_configs(conn: &Connection) -> Result<Vec<ProviderConfig>, String> {
     let mut stmt = conn.prepare(
-        "SELECT id, provider_key, display_name, base_url, api_key, is_preset, enabled, sort_order, created_at, updated_at FROM provider_configs ORDER BY sort_order"
+        "SELECT id, provider_key, display_name, base_url, api_key_ref, is_preset, enabled, sort_order, created_at, updated_at FROM provider_configs ORDER BY sort_order"
     ).map_err(|e| e.to_string())?;
 
     let rows = stmt.query_map([], |row| {
+        let api_key_ref: String = row.get(4)?;
         Ok(ProviderConfig {
             id: row.get(0)?,
             provider_key: row.get(1)?,
             display_name: row.get(2)?,
             base_url: row.get(3)?,
-            api_key: mask_key(&row.get::<_, String>(4)?),
+            api_key: masked_key_from_ref(&api_key_ref),
             is_preset: row.get::<_, i32>(5)? != 0,
             enabled: row.get::<_, i32>(6)? != 0,
             sort_order: row.get(7)?,
@@ -55,16 +59,17 @@ pub fn list_provider_configs(conn: &Connection) -> Result<Vec<ProviderConfig>, S
 
 pub fn get_provider_config(conn: &Connection, id: &str) -> Result<ProviderConfig, String> {
     let mut stmt = conn.prepare(
-        "SELECT id, provider_key, display_name, base_url, api_key, is_preset, enabled, sort_order, created_at, updated_at FROM provider_configs WHERE id = ?1"
+        "SELECT id, provider_key, display_name, base_url, api_key_ref, is_preset, enabled, sort_order, created_at, updated_at FROM provider_configs WHERE id = ?1"
     ).map_err(|e| e.to_string())?;
 
     stmt.query_row(params![id], |row| {
+        let api_key_ref: String = row.get(4)?;
         Ok(ProviderConfig {
             id: row.get(0)?,
             provider_key: row.get(1)?,
             display_name: row.get(2)?,
             base_url: row.get(3)?,
-            api_key: mask_key(&row.get::<_, String>(4)?),
+            api_key: masked_key_from_ref(&api_key_ref),
             is_preset: row.get::<_, i32>(5)? != 0,
             enabled: row.get::<_, i32>(6)? != 0,
             sort_order: row.get(7)?,
@@ -79,21 +84,26 @@ pub fn upsert_provider_config(conn: &Connection, input: &ProviderConfigInput) ->
     let now = now_iso();
 
     if input.id.is_some() {
-        // Update
-        let api_key_clause = match &input.api_key {
-            Some(k) => format!(", api_key = '{}'", k.replace('\'', "''")),
+        if let Some(key) = input.api_key.as_ref().filter(|value| !value.is_empty()) {
+            let api_key_ref = store_api_key(&id, key)?;
+            conn.execute(
+                "UPDATE provider_configs SET display_name = ?1, base_url = ?2, enabled = ?3, updated_at = ?4, api_key_ref = ?5 WHERE id = ?6",
+                params![input.display_name, input.base_url, input.enabled.unwrap_or(true) as i32, now, api_key_ref, id]
+            ).map_err(|e| e.to_string())?;
+        } else {
+            conn.execute(
+                "UPDATE provider_configs SET display_name = ?1, base_url = ?2, enabled = ?3, updated_at = ?4 WHERE id = ?5",
+                params![input.display_name, input.base_url, input.enabled.unwrap_or(true) as i32, now, id]
+            ).map_err(|e| e.to_string())?;
+        }
+    } else {
+        let api_key_ref = match input.api_key.as_ref().filter(|value| !value.is_empty()) {
+            Some(key) => store_api_key(&id, key)?,
             None => String::new(),
         };
-        conn.execute(&format!(
-            "UPDATE provider_configs SET display_name = ?1, base_url = ?2, enabled = ?3, updated_at = ?4{} WHERE id = ?5",
-            api_key_clause
-        ), params![input.display_name, input.base_url, input.enabled.unwrap_or(true) as i32, now, id]
-        ).map_err(|e| e.to_string())?;
-    } else {
-        // Insert
         conn.execute(
-            "INSERT INTO provider_configs (id, provider_key, display_name, base_url, api_key, is_preset, enabled, sort_order, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, 0, ?6, 99, ?7, ?7)",
-            params![id, input.provider_key, input.display_name, input.base_url, input.api_key.as_deref().unwrap_or(""), input.enabled.unwrap_or(true) as i32, now]
+            "INSERT INTO provider_configs (id, provider_key, display_name, base_url, api_key_ref, is_preset, enabled, sort_order, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, 0, ?6, 99, ?7, ?7)",
+            params![id, input.provider_key, input.display_name, input.base_url, api_key_ref, input.enabled.unwrap_or(true) as i32, now]
         ).map_err(|e| e.to_string())?;
     }
 
@@ -101,6 +111,14 @@ pub fn upsert_provider_config(conn: &Connection, input: &ProviderConfigInput) ->
 }
 
 pub fn delete_provider_config(conn: &Connection, id: &str) -> Result<(), String> {
+    let api_key_ref: Option<String> = conn.query_row(
+        "SELECT api_key_ref FROM provider_configs WHERE id = ?1",
+        params![id],
+        |row| row.get(0),
+    ).ok();
+    if let Some(api_key_ref) = api_key_ref.as_deref().filter(|value| !value.is_empty()) {
+        delete_api_key(api_key_ref);
+    }
     conn.execute("DELETE FROM provider_models WHERE provider_config_id = ?1", params![id])
         .map_err(|e| e.to_string())?;
     conn.execute("DELETE FROM provider_configs WHERE id = ?1", params![id])
@@ -119,8 +137,8 @@ pub fn seed_preset_providers(conn: &Connection) -> Result<Vec<ProviderConfig>, S
 
         if !exists {
             conn.execute(
-                "INSERT OR IGNORE INTO provider_configs (id, provider_key, display_name, base_url, api_key, is_preset, enabled, sort_order, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?9)",
-                params![p.id, p.provider_key, p.display_name, p.base_url, p.api_key, p.is_preset as i32, p.enabled as i32, p.sort_order, p.created_at],
+                "INSERT OR IGNORE INTO provider_configs (id, provider_key, display_name, base_url, api_key_ref, is_preset, enabled, sort_order, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, '', ?5, ?6, ?7, ?8, ?8)",
+                params![p.id, p.provider_key, p.display_name, p.base_url, p.is_preset as i32, p.enabled as i32, p.sort_order, p.created_at],
             ).map_err(|e| e.to_string())?;
         }
     }
@@ -183,7 +201,8 @@ pub fn upsert_provider_model(conn: &Connection, input: &ProviderModelInput) -> R
 
 pub fn delete_provider_model(conn: &Connection, id: &str) -> Result<(), String> {
     conn.execute("DELETE FROM provider_models WHERE id = ?1", params![id])
-        .map_err(|e| e.to_string())
+        .map_err(|e| e.to_string())?;
+    Ok(())
 }
 
 pub fn set_default_model(conn: &Connection, provider_config_id: &str, model_id: &str) -> Result<(), String> {
@@ -206,8 +225,42 @@ fn mask_key(key: &str) -> String {
     format!("{}...{}", &key[..4], &key[key.len()-4..])
 }
 
+fn keychain_entry(account: &str) -> Result<keyring::Entry, String> {
+    keyring::Entry::new(KEYCHAIN_SERVICE, account).map_err(|e| e.to_string())
+}
+
+fn api_key_account(provider_config_id: &str) -> String {
+    format!("provider:{}", provider_config_id)
+}
+
+fn store_api_key(provider_config_id: &str, key: &str) -> Result<String, String> {
+    let account = api_key_account(provider_config_id);
+    keychain_entry(&account)?.set_password(key).map_err(|e| e.to_string())?;
+    Ok(account)
+}
+
+fn masked_key_from_ref(api_key_ref: &str) -> String {
+    if api_key_ref.is_empty() {
+        return String::new();
+    }
+    match keychain_entry(api_key_ref).and_then(|entry| entry.get_password().map_err(|e| e.to_string())) {
+        Ok(key) => mask_key(&key),
+        Err(_) => String::new(),
+    }
+}
+
+fn delete_api_key(api_key_ref: &str) {
+    if let Ok(entry) = keychain_entry(api_key_ref) {
+        let _ = entry.delete_credential();
+    }
+}
+
 fn uuid_short() -> String {
-    format!("{:08x}", std::time::SystemTime::now().elapsed().unwrap_or_default().as_millis())
+    let millis = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis();
+    format!("{:x}", millis)
 }
 
 fn now_iso() -> String {
