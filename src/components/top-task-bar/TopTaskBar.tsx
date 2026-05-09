@@ -4,7 +4,7 @@ import { mockAgents } from "../../mocks/mockAgents";
 import { mockEvents } from "../../mocks/mockEvents";
 import { playMockEvents } from "../../mocks/mockPlayer";
 
-export function TopTaskBar() {
+export function TopTaskBar({ onSettingsClick }: { onSettingsClick: () => void }) {
   const [task, setTask] = useState(
     "调研 AI 桌面智能体的发展趋势，并输出一份分析报告。"
   );
@@ -57,6 +57,9 @@ export function TopTaskBar() {
           {session.status === "completed" ? "已完成" : `状态：${session.status}`}
         </span>
       )}
+      <button className="btn-settings" onClick={onSettingsClick} title="API Settings">
+        ⚙
+      </button>
     </div>
   );
 }
